@@ -1,22 +1,33 @@
-package cmd_test
+package cmd
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
-	"termcord/cmd"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRun(t *testing.T) {
+	c := exec.Command("echo", "success!")
 	buf := &bytes.Buffer{}
-	cfg := cmd.Config{
-		File: buf,
-		Cmd:  exec.Command("echo", "success"),
-	}
-
-	cmd.Run(cfg)
+	cfg := Config{}
+	Run(c, buf, cfg)
+	want := "success!"
 	got := buf.String()
-	assert.Contains(t, got, "success")
+	assert.Contains(t, got, want)
+}
+
+func TestParseArgs(t *testing.T) {
+	//TODO
+}
+
+func TestPtmxFromCmd(t *testing.T) {
+	//TODO: We're essentially testing the pty package here. Do we need this?
+	c := exec.Command("echo", "success!")
+	ptmx, fn, err := ptmxFromCmd(c, false)
+	assert.Empty(t, fn)
+	assert.IsType(t, new(os.File), ptmx)
+	assert.NoError(t, err)
 }
