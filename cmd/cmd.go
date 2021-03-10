@@ -21,10 +21,17 @@ type Config struct {
 	CmdArgs     []string
 	QuietMode   bool
 	Interactive bool
+	PrintHelp   bool
 }
+
+var cli *flag.FlagSet
 
 //Run creates the script file, creates a new pty and runs the command in that pty
 func Run(c *exec.Cmd, f io.Writer, config Config) error {
+	if config.PrintHelp {
+		printHelp()
+		return nil
+	}
 	if !config.QuietMode {
 		fmt.Println("Starting recording session. Use CTRL-D to end.")
 		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", config.Filename)
@@ -58,28 +65,25 @@ func ParseArgs() Config {
 	var cmdArgs []string
 
 	var h, q bool
-	var foo string
-	flag.BoolVar(&h, "h", false, "Prints this message")
-	flag.BoolVar(&q, "q", false, "TODO")
-	flag.StringVar(&foo, "f", "", "TODO")
-	//TODO moar flags
-	flag.Parse()
-	if h {
-		printHelpAndQuit()
-	}
+
+	cli = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	cli.BoolVar(&h, "h", false, "Prints this message")
+	cli.BoolVar(&q, "q", false, "TODO")
+
+	cli.Parse(os.Args[1:])
 
 	interactive := true
-	switch flag.NArg() {
+	switch cli.NArg() {
 	case 0:
 		fName = "termcording"
 		cmdName = getShell()
 	case 1:
-		fName = flag.Arg(0)
+		fName = cli.Arg(0)
 		cmdName = getShell()
 	default:
-		fName = flag.Arg(0)
-		cmdName = flag.Arg(1)
-		cmdArgs = flag.Args()[2:]
+		fName = cli.Arg(0)
+		cmdName = cli.Arg(1)
+		cmdArgs = cli.Args()[2:]
 		interactive = false
 	}
 
@@ -89,15 +93,17 @@ func ParseArgs() Config {
 		CmdArgs:     cmdArgs,
 		QuietMode:   q,
 		Interactive: interactive,
+		PrintHelp:   h,
 	}
 }
 
 func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
+	modeRestoreFn := func() {}
+
 	ptmx, err := pty.Start(c)
 	if err != nil {
 		return nil, nil, err
 	}
-	modeRestoreFn := func() {}
 	if interactive {
 		// Handle pty size.
 		ch := make(chan os.Signal, 1)
@@ -129,11 +135,11 @@ func getShell() string {
 	return shell
 }
 
-func printHelpAndQuit() {
-	// fmt.Println("TODO: Intro")
-	// fmt.Println()
-	fmt.Printf("Usage: %s [options]\n", os.Args[0])
+func printHelp() {
+	fmt.Println("TODO: Intro")
+	fmt.Println()
+	fmt.Printf("Usage: %s [options] [filename [command...]]\n", os.Args[0])
 	fmt.Println("Options:")
-	flag.PrintDefaults()
-	os.Exit(1)
+	cli.PrintDefaults()
+	fmt.Println()
 }
