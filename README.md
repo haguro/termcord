@@ -1,5 +1,7 @@
 # termcord
 
+[![Tests](https://github.com/haguro/termcord/actions/workflows/tests.yml/badge.svg)](https://github.com/haguro/termcord/actions/workflows/tests.yml) [![Golint](https://github.com/haguro/termcord/actions/workflows/golint.yml/badge.svg)](https://github.com/haguro/termcord/actions/workflows/golint.yml) 
+
 `termcord` is a terminal session recorder written in Go.
 
 ## Features and usage

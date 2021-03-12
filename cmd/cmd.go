@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -27,13 +28,13 @@ type Config struct {
 var cli *flag.FlagSet
 
 //Run creates the script file, creates a new pty and runs the command in that pty
-func Run(c *exec.Cmd, f io.Writer, config Config) error {
+func Run(c *exec.Cmd, f io.Writer, config *Config) error {
 	if config.PrintHelp {
 		printHelp()
 		return nil
 	}
 	if !config.QuietMode {
-		fmt.Println("Starting recording session. Use CTRL-D to end.")
+		fmt.Println("Starting recording session. CTRL-D to end.")
 		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", config.Filename)
 	}
 
@@ -60,7 +61,7 @@ func Run(c *exec.Cmd, f io.Writer, config Config) error {
 
 //ParseArgs parses command line arguments (and flags) and returns a Config with the values
 //of said arguments and flags
-func ParseArgs() Config {
+func ParseArgs() (*Config, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 
@@ -72,14 +73,18 @@ func ParseArgs() Config {
 
 	cli.Parse(os.Args[1:])
 
+	shell, ok := os.LookupEnv("SHELL")
+	if cli.Arg(1) == "" && (!ok || shell == "") {
+		return &Config{}, errors.New("shell not set")
+	}
 	interactive := true
 	switch cli.NArg() {
 	case 0:
 		fName = "termcording"
-		cmdName = getShell()
+		cmdName = shell
 	case 1:
 		fName = cli.Arg(0)
-		cmdName = getShell()
+		cmdName = shell
 	default:
 		fName = cli.Arg(0)
 		cmdName = cli.Arg(1)
@@ -87,14 +92,14 @@ func ParseArgs() Config {
 		interactive = false
 	}
 
-	return Config{
+	return &Config{
 		Filename:    fName,
 		CmdName:     cmdName,
 		CmdArgs:     cmdArgs,
 		QuietMode:   q,
 		Interactive: interactive,
 		PrintHelp:   h,
-	}
+	}, nil
 }
 
 func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
@@ -125,14 +130,6 @@ func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
 		modeRestoreFn = func() { term.Restore(int(os.Stdin.Fd()), oldState) }
 	}
 	return ptmx, modeRestoreFn, err
-}
-
-func getShell() string {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		log.Fatal("shell is not set")
-	}
-	return shell
 }
 
 func printHelp() {

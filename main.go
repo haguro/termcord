@@ -8,7 +8,10 @@ import (
 )
 
 func main() {
-	config := cmd.ParseArgs()
+	config, err := cmd.ParseArgs()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	f, err := os.OpenFile(config.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
