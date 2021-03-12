@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"termcord/cmd"
+	"termcord/pkg/termcorder"
 )
 
 func main() {
-	config, err := cmd.ParseArgs()
+	config, err := termcorder.ParseArgs()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func main() {
 
 	c := exec.Command(config.CmdName, config.CmdArgs...)
 
-	if err := cmd.Run(c, f, config); err != nil {
+	if err := termcorder.Run(c, f, config); err != nil {
 		log.Fatal(err)
 	}
 }

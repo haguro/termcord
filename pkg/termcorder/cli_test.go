@@ -1,10 +1,12 @@
-package cmd
+package termcorder_test
 
 import (
 	"bytes"
 	"os"
 	"os/exec"
 	"testing"
+
+	"termcord/pkg/termcorder"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,8 +15,8 @@ func TestRun(t *testing.T) {
 	t.Parallel()
 	c := exec.Command("echo", "success!")
 	buf := &bytes.Buffer{}
-	cfg := &Config{Filename: "termcording", Interactive: false}
-	Run(c, buf, cfg)
+	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
+	termcorder.Run(c, buf, cfg)
 	want := "success!"
 	got := buf.String()
 	assert.Contains(t, got, want)
@@ -24,7 +26,7 @@ func TestParseArgs(t *testing.T) {
 	t.Parallel()
 	t.Run("Test setting flags", func(t *testing.T) {
 		os.Args = []string{"./termcord", "-h", "-q", "foo", "bar", "baz"}
-		want := &Config{
+		want := &termcorder.Config{
 			Filename:    "foo",
 			CmdName:     "bar",
 			CmdArgs:     []string{"baz"},
@@ -32,7 +34,7 @@ func TestParseArgs(t *testing.T) {
 			PrintHelp:   true,
 			QuietMode:   true,
 		}
-		got, err := ParseArgs()
+		got, err := termcorder.ParseArgs()
 
 		assert.NoError(t, err)
 		assert.Equal(t, want, got)
@@ -41,7 +43,7 @@ func TestParseArgs(t *testing.T) {
 	t.Run("Test setting filename", func(t *testing.T) {
 		os.Args = []string{"./termcord", "foo.txt", "bar"}
 		want := "foo.txt"
-		got, err := ParseArgs()
+		got, err := termcorder.ParseArgs()
 
 		assert.NoError(t, err)
 		assert.Equal(t, want, got.Filename)
@@ -53,7 +55,7 @@ func TestParseArgs(t *testing.T) {
 		defer os.Setenv("SHELL", shell)
 		shell = "/foo/bar"
 		os.Setenv("SHELL", shell)
-		got, err := ParseArgs()
+		got, err := termcorder.ParseArgs()
 
 		assert.NoError(t, err)
 		assert.Equal(t, shell, got.CmdName)
@@ -64,18 +66,9 @@ func TestParseArgs(t *testing.T) {
 		shell, _ := os.LookupEnv("SHELL")
 		defer os.Setenv("SHELL", shell)
 		os.Unsetenv("SHELL")
-		_, err := ParseArgs()
+		_, err := termcorder.ParseArgs()
 
 		assert.Error(t, err)
 	})
 
-}
-
-func TestPtmxFromCmd(t *testing.T) {
-	t.Parallel()
-	//TODO: We're essentially testing the pty package here. Do we need this?
-	c := exec.Command("echo", "success!")
-	ptmx, _, err := ptmxFromCmd(c, false)
-	assert.IsType(t, new(os.File), ptmx)
-	assert.NoError(t, err)
 }

@@ -1,4 +1,4 @@
-package cmd
+package termcorder
 
 import (
 	"errors"
@@ -24,6 +24,8 @@ type Config struct {
 	Interactive bool
 	PrintHelp   bool
 }
+
+const defaultFileName = "termcording"
 
 var cli *flag.FlagSet
 
@@ -80,7 +82,7 @@ func ParseArgs() (*Config, error) {
 	interactive := true
 	switch cli.NArg() {
 	case 0:
-		fName = "termcording"
+		fName = defaultFileName
 		cmdName = shell
 	case 1:
 		fName = cli.Arg(0)
