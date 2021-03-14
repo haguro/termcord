@@ -6,13 +6,13 @@ import (
 )
 
 func main() {
-	tc, closer, err := termcorder.TermcordingFromFlags()
+	tc, err := termcorder.TermcordingFromFlags()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer closer()
 
-	if err := tc.Start(); err != nil {
+	//TODO a better way to handle optional parameters
+	if err := tc.Start(nil, nil); err != nil {
 		log.Fatal(err)
 	}
 }

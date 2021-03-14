@@ -3,6 +3,7 @@ package termcorder_test
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"testing"
 
 	"termcord/pkg/termcorder"
@@ -12,23 +13,20 @@ import (
 
 func TestNewTermcording(t *testing.T) {
 	t.Parallel()
-	cfg := termcorder.Config{}
-	buf, _ := os.Open(os.DevNull)
-	tc, closer, err := termcorder.NewTermcording(&cfg, buf)
-	defer closer()
+	cfg := &termcorder.Config{}
+	tc, err := termcorder.NewTermcording(cfg)
 	assert.IsType(t, &termcorder.Termcording{}, tc)
 	assert.NoError(t, err)
-	//TODO more tests
 }
 
 func TestStart(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
-	cfg := &termcorder.Config{Filename: "termcording", CmdName: "echo", CmdArgs: []string{"success!"}, Interactive: false}
-	tc, closer, err := termcorder.NewTermcording(cfg, buf)
+	cmd := exec.Command("echo", "success!")
+	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
+	tc, err := termcorder.NewTermcording(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, func() error { return nil }, closer)
-	tc.Start()
+	tc.Start(cmd, buf)
 	want := "success!"
 	got := buf.String()
 	assert.Contains(t, got, want)
@@ -47,9 +45,8 @@ func TestTermcordingFromFlags(t *testing.T) {
 			QuietMode:   true,
 		}
 
-		got, closer, err := termcorder.TermcordingFromFlags()
+		got, err := termcorder.TermcordingFromFlags()
 
-		assert.IsType(t, func() error { return nil }, closer)
 		assert.NoError(t, err)
 		assert.Equal(t, want, got.Config)
 	})
@@ -57,7 +54,7 @@ func TestTermcordingFromFlags(t *testing.T) {
 	t.Run("Test setting filename", func(t *testing.T) {
 		os.Args = []string{"./termcord", "foo.txt", "bar"}
 		want := "foo.txt"
-		got, _, err := termcorder.TermcordingFromFlags()
+		got, err := termcorder.TermcordingFromFlags()
 
 		assert.NoError(t, err)
 		assert.Equal(t, want, got.Config.Filename)
@@ -69,7 +66,7 @@ func TestTermcordingFromFlags(t *testing.T) {
 		defer os.Setenv("SHELL", shell)
 		shell = "/foo/bar"
 		os.Setenv("SHELL", shell)
-		got, _, err := termcorder.TermcordingFromFlags()
+		got, err := termcorder.TermcordingFromFlags()
 
 		assert.NoError(t, err)
 		assert.Equal(t, shell, got.Config.CmdName)
@@ -80,7 +77,7 @@ func TestTermcordingFromFlags(t *testing.T) {
 		shell, _ := os.LookupEnv("SHELL")
 		defer os.Setenv("SHELL", shell)
 		os.Unsetenv("SHELL")
-		_, _, err := termcorder.TermcordingFromFlags()
+		_, err := termcorder.TermcordingFromFlags()
 
 		assert.Error(t, err)
 	})

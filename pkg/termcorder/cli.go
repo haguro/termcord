@@ -17,9 +17,7 @@ import (
 
 //Termcording represent a command/terminal recording
 type Termcording struct {
-	Config  *Config
-	Writers io.Writer
-	// Command *exec.Cmd
+	Config *Config
 }
 
 //Config represents the command configuration
@@ -37,58 +35,15 @@ const defaultFileName = "termcording"
 var cli *flag.FlagSet
 
 //NewTermcording create a new Termcording instance
-func NewTermcording(cfg *Config, w io.Writer) (*Termcording, func() error, error) {
-	closerFn := func() error { return nil }
-	if w == nil {
-		f, err := os.OpenFile(cfg.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
-		if err != nil {
-			return &Termcording{}, nil, err
-		}
-		closerFn = func() error { return f.Close() }
-
-		w = io.MultiWriter(os.Stdout)
-	}
-
+func NewTermcording(cfg *Config) (*Termcording, error) {
 	return &Termcording{
-		Writers: w,
-		Config:  cfg,
-	}, closerFn, nil
-}
-
-//Start creates the script file, creates a new pty and runs the command in that pty
-func (tc *Termcording) Start() error {
-	if tc.Config.PrintHelp {
-		printHelp()
-		return nil
-	}
-	if !tc.Config.QuietMode {
-		fmt.Println("Starting recording session. CTRL-D to end.")
-		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
-	}
-
-	cmd := exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
-	ptmx, restoreMode, err := ptmxFromCmd(cmd, tc.Config.Interactive)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		restoreMode()
-		ptmx.Close()
-	}()
-
-	//inputMWriter := io.MultiWriter(ptmx, f) //TODO: Add option to record stdin as well (as with script -k)
-	go func() {
-		io.Copy(ptmx, os.Stdin)
-	}()
-
-	io.Copy(tc.Writers, ptmx)
-
-	return cmd.Wait()
+		Config: cfg,
+	}, nil
 }
 
 //TermcordingFromFlags parses command line arguments (and flags) and returns a Config with the values
 //of said arguments and flags
-func TermcordingFromFlags() (*Termcording, func() error, error) {
+func TermcordingFromFlags() (*Termcording, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 
@@ -102,7 +57,7 @@ func TermcordingFromFlags() (*Termcording, func() error, error) {
 
 	shell, ok := os.LookupEnv("SHELL")
 	if cli.Arg(1) == "" && (!ok || shell == "") {
-		return &Termcording{}, func() error { return nil }, errors.New("shell not set")
+		return &Termcording{}, errors.New("shell not set")
 	}
 	interactive := true
 	switch cli.NArg() {
@@ -126,7 +81,47 @@ func TermcordingFromFlags() (*Termcording, func() error, error) {
 		QuietMode:   q,
 		Interactive: interactive,
 		PrintHelp:   h,
-	}, nil)
+	})
+}
+
+//Start creates the script file, creates a new pty and runs the command in that pty
+func (tc *Termcording) Start(cmd *exec.Cmd, w io.Writer) error {
+	if tc.Config.PrintHelp {
+		printHelp()
+		return nil
+	}
+	if w == nil {
+		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		w = io.MultiWriter(os.Stdout, f)
+	}
+	if cmd == nil {
+		cmd = exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
+	}
+	if !tc.Config.QuietMode {
+		fmt.Println("Starting recording session. CTRL-D to end.")
+		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
+	}
+	ptmx, restoreMode, err := ptmxFromCmd(cmd, tc.Config.Interactive)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		restoreMode()
+		ptmx.Close()
+	}()
+
+	//inputMWriter := io.MultiWriter(ptmx, f) //TODO: Add option to record stdin as well (as with script -k)
+	go func() {
+		io.Copy(ptmx, os.Stdin)
+	}()
+
+	io.Copy(w, ptmx)
+
+	return cmd.Wait()
 }
 
 func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
