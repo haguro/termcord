@@ -3,7 +3,6 @@ package termcorder_test
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"testing"
 
 	"termcord/pkg/termcorder"
@@ -11,18 +10,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRun(t *testing.T) {
+func TestNewTermcording(t *testing.T) {
 	t.Parallel()
-	c := exec.Command("echo", "success!")
+	cfg := termcorder.Config{}
+	buf, _ := os.Open(os.DevNull)
+	tc, closer, err := termcorder.NewTermcording(&cfg, buf)
+	defer closer()
+	assert.IsType(t, &termcorder.Termcording{}, tc)
+	assert.NoError(t, err)
+	//TODO more tests
+}
+
+func TestStart(t *testing.T) {
+	t.Parallel()
 	buf := &bytes.Buffer{}
-	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
-	termcorder.Run(c, buf, cfg)
+	cfg := &termcorder.Config{Filename: "termcording", CmdName: "echo", CmdArgs: []string{"success!"}, Interactive: false}
+	tc, closer, err := termcorder.NewTermcording(cfg, buf)
+	assert.NoError(t, err)
+	assert.IsType(t, func() error { return nil }, closer)
+	tc.Start()
 	want := "success!"
 	got := buf.String()
 	assert.Contains(t, got, want)
 }
 
-func TestParseArgs(t *testing.T) {
+func TestTermcordingFromFlags(t *testing.T) {
 	t.Parallel()
 	t.Run("Test setting flags", func(t *testing.T) {
 		os.Args = []string{"./termcord", "-h", "-q", "foo", "bar", "baz"}
@@ -34,19 +46,21 @@ func TestParseArgs(t *testing.T) {
 			PrintHelp:   true,
 			QuietMode:   true,
 		}
-		got, err := termcorder.ParseArgs()
 
+		got, closer, err := termcorder.TermcordingFromFlags()
+
+		assert.IsType(t, func() error { return nil }, closer)
 		assert.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, want, got.Config)
 	})
 
 	t.Run("Test setting filename", func(t *testing.T) {
 		os.Args = []string{"./termcord", "foo.txt", "bar"}
 		want := "foo.txt"
-		got, err := termcorder.ParseArgs()
+		got, _, err := termcorder.TermcordingFromFlags()
 
 		assert.NoError(t, err)
-		assert.Equal(t, want, got.Filename)
+		assert.Equal(t, want, got.Config.Filename)
 	})
 
 	t.Run("Default to current shell if no command is provided", func(t *testing.T) {
@@ -55,10 +69,10 @@ func TestParseArgs(t *testing.T) {
 		defer os.Setenv("SHELL", shell)
 		shell = "/foo/bar"
 		os.Setenv("SHELL", shell)
-		got, err := termcorder.ParseArgs()
+		got, _, err := termcorder.TermcordingFromFlags()
 
 		assert.NoError(t, err)
-		assert.Equal(t, shell, got.CmdName)
+		assert.Equal(t, shell, got.Config.CmdName)
 	})
 
 	t.Run("Return an error if shell is not set and no command is provided", func(t *testing.T) {
@@ -66,7 +80,7 @@ func TestParseArgs(t *testing.T) {
 		shell, _ := os.LookupEnv("SHELL")
 		defer os.Setenv("SHELL", shell)
 		os.Unsetenv("SHELL")
-		_, err := termcorder.ParseArgs()
+		_, _, err := termcorder.TermcordingFromFlags()
 
 		assert.Error(t, err)
 	})

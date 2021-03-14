@@ -15,6 +15,13 @@ import (
 	"golang.org/x/term"
 )
 
+//Termcording represent a command/terminal recording
+type Termcording struct {
+	Config  *Config
+	Writers io.Writer
+	// Command *exec.Cmd
+}
+
 //Config represents the command configuration
 type Config struct {
 	Filename    string
@@ -29,18 +36,38 @@ const defaultFileName = "termcording"
 
 var cli *flag.FlagSet
 
-//Run creates the script file, creates a new pty and runs the command in that pty
-func Run(c *exec.Cmd, f io.Writer, config *Config) error {
-	if config.PrintHelp {
+//NewTermcording create a new Termcording instance
+func NewTermcording(cfg *Config, w io.Writer) (*Termcording, func() error, error) {
+	closerFn := func() error { return nil }
+	if w == nil {
+		f, err := os.OpenFile(cfg.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			return &Termcording{}, nil, err
+		}
+		closerFn = func() error { return f.Close() }
+
+		w = io.MultiWriter(os.Stdout)
+	}
+
+	return &Termcording{
+		Writers: w,
+		Config:  cfg,
+	}, closerFn, nil
+}
+
+//Start creates the script file, creates a new pty and runs the command in that pty
+func (tc *Termcording) Start() error {
+	if tc.Config.PrintHelp {
 		printHelp()
 		return nil
 	}
-	if !config.QuietMode {
+	if !tc.Config.QuietMode {
 		fmt.Println("Starting recording session. CTRL-D to end.")
-		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", config.Filename)
+		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
 	}
 
-	ptmx, restoreMode, err := ptmxFromCmd(c, config.Interactive)
+	cmd := exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
+	ptmx, restoreMode, err := ptmxFromCmd(cmd, tc.Config.Interactive)
 	if err != nil {
 		return err
 	}
@@ -50,20 +77,18 @@ func Run(c *exec.Cmd, f io.Writer, config *Config) error {
 	}()
 
 	//inputMWriter := io.MultiWriter(ptmx, f) //TODO: Add option to record stdin as well (as with script -k)
-	outputMWriter := io.MultiWriter(os.Stdout, f)
-
 	go func() {
 		io.Copy(ptmx, os.Stdin)
 	}()
 
-	io.Copy(outputMWriter, ptmx)
+	io.Copy(tc.Writers, ptmx)
 
-	return c.Wait()
+	return cmd.Wait()
 }
 
-//ParseArgs parses command line arguments (and flags) and returns a Config with the values
+//TermcordingFromFlags parses command line arguments (and flags) and returns a Config with the values
 //of said arguments and flags
-func ParseArgs() (*Config, error) {
+func TermcordingFromFlags() (*Termcording, func() error, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 
@@ -77,7 +102,7 @@ func ParseArgs() (*Config, error) {
 
 	shell, ok := os.LookupEnv("SHELL")
 	if cli.Arg(1) == "" && (!ok || shell == "") {
-		return &Config{}, errors.New("shell not set")
+		return &Termcording{}, func() error { return nil }, errors.New("shell not set")
 	}
 	interactive := true
 	switch cli.NArg() {
@@ -94,14 +119,14 @@ func ParseArgs() (*Config, error) {
 		interactive = false
 	}
 
-	return &Config{
+	return NewTermcording(&Config{
 		Filename:    fName,
 		CmdName:     cmdName,
 		CmdArgs:     cmdArgs,
 		QuietMode:   q,
 		Interactive: interactive,
 		PrintHelp:   h,
-	}, nil
+	}, nil)
 }
 
 func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {

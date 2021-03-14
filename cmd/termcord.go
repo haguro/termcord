@@ -2,26 +2,17 @@ package main
 
 import (
 	"log"
-	"os"
-	"os/exec"
 	"termcord/pkg/termcorder"
 )
 
 func main() {
-	config, err := termcorder.ParseArgs()
+	tc, closer, err := termcorder.TermcordingFromFlags()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer closer()
 
-	f, err := os.OpenFile(config.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	c := exec.Command(config.CmdName, config.CmdArgs...)
-
-	if err := termcorder.Run(c, f, config); err != nil {
+	if err := tc.Start(); err != nil {
 		log.Fatal(err)
 	}
 }
