@@ -11,8 +11,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//TODO a better way to handle optional parameters
-	if err := tc.Start(nil, nil); err != nil {
+	if err := tc.Start(); err != nil {
 		log.Fatal(err)
 	}
 }
