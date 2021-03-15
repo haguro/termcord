@@ -28,6 +28,7 @@ type Config struct {
 	CmdName     string
 	CmdArgs     []string
 	QuietMode   bool
+	Append      bool
 	Interactive bool
 	PrintHelp   bool
 }
@@ -36,7 +37,7 @@ const defaultFileName = "termcording"
 
 var cli *flag.FlagSet
 
-//Cmd sets the termcording's cmd
+//Cmd sets the termcording's cmd.
 func Cmd(c *exec.Cmd) func(*Termcording) error {
 	return func(tc *Termcording) error {
 		tc.cmd = c
@@ -44,7 +45,7 @@ func Cmd(c *exec.Cmd) func(*Termcording) error {
 	}
 }
 
-//Output sets the termcording's output
+//Output sets the termcording's output.
 func Output(w io.Writer) func(*Termcording) error {
 	return func(tc *Termcording) error {
 		tc.out = w
@@ -52,7 +53,8 @@ func Output(w io.Writer) func(*Termcording) error {
 	}
 }
 
-//NewTermcording create a new Termcording instance
+//NewTermcording returns a pointer to a new variable of type Termcording given a config
+//variable and (functional) options.
 func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcording, error) {
 	tc := &Termcording{
 		Config: c,
@@ -66,17 +68,18 @@ func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcordin
 	return tc, nil
 }
 
-//TermcordingFromFlags parses command line arguments (and flags) and returns a Config with the values
-//of said arguments and flags
+//TermcordingFromFlags parses command line flags (and arguments) and returns a pointer to a
+//new variable of type `Termcording`.
 func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 
-	var h, q bool
+	var h, q, a bool
 
 	cli = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	cli.BoolVar(&h, "h", false, "Prints this message")
-	cli.BoolVar(&q, "q", false, "quite mode - supresses the recording start and end prompts")
+	cli.BoolVar(&q, "q", false, "quite mode - suppresses the recording start and stop prompts")
+	cli.BoolVar(&a, "a", false, "append to file instead of overwriting it")
 
 	cli.Parse(os.Args[1:])
 
@@ -104,6 +107,7 @@ func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, er
 		CmdName:     cmdName,
 		CmdArgs:     cmdArgs,
 		QuietMode:   q,
+		Append:      a,
 		Interactive: interactive,
 		PrintHelp:   h,
 	}, options...)
@@ -115,11 +119,15 @@ func (tc *Termcording) Start() error {
 		if tc.out == nil {
 			tc.out = os.Stdout
 		}
-		tc.printHelp()
+		printHelp(tc)
 		return nil
 	}
 	if tc.out == nil {
-		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		mode := os.O_TRUNC
+		if tc.Config.Append {
+			mode = os.O_APPEND
+		}
+		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|mode, 0755)
 		if err != nil {
 			return err
 		}
@@ -183,13 +191,11 @@ func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
 	return ptmx, modeRestoreFn, err
 }
 
-func (tc *Termcording) printHelp() {
+func printHelp(tc *Termcording) {
 	fmt.Fprintf(tc.out, "termcord is a terminal session recorder written in Go.\n\n")
 	fmt.Fprintf(tc.out, "Usage: %s [options] [filename [command...]]\n", os.Args[0])
 	fmt.Fprintf(tc.out, "Options:\n")
-	fmt.Fprintf(tc.out, "-h	Prints this message\n")
-	fmt.Fprintf(tc.out, "-q	Quite mode - supresses the recording start and end prompts\n")
-	//TODO print default output to tc.writer
-	//cli.PrintDefaults()
-	fmt.Fprintf(tc.out, "\n")
+	cli.VisitAll(func(f *flag.Flag) {
+		fmt.Fprintf(tc.out, "  -%s	%s\n", f.Name, f.Usage)
+	})
 }
