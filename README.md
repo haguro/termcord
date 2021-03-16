@@ -19,4 +19,10 @@ To preview a recorded session:
 $ cat termcording
 ```
 
+For usage information:
+
+```
+$ termcording -h
+```
+
 The aim is for termcord to match and expand upon functionality of tools like `script`.

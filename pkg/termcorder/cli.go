@@ -78,8 +78,8 @@ func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, er
 
 	cli = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	cli.BoolVar(&h, "h", false, "Prints this message")
-	cli.BoolVar(&q, "q", false, "quite mode - suppresses the recording start and stop prompts")
-	cli.BoolVar(&a, "a", false, "append to file instead of overwriting it")
+	cli.BoolVar(&q, "q", false, "Quiet mode - suppresses the recording start and end prompts")
+	cli.BoolVar(&a, "a", false, "Appends to file instead of overwriting it")
 
 	cli.Parse(os.Args[1:])
 
@@ -113,7 +113,7 @@ func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, er
 	}, options...)
 }
 
-//Start creates the script file, creates a new pty and runs the command in that pty
+//Start runs the tc.cmd in a pseudo-terminal and writes all output to tc.out
 func (tc *Termcording) Start() error {
 	if tc.Config.PrintHelp {
 		if tc.out == nil {
@@ -146,7 +146,6 @@ func (tc *Termcording) Start() error {
 		return err
 	}
 
-	//inputMWriter := io.MultiWriter(ptmx, f) //TODO: Add option to record stdin as well (as with script -k)
 	defer func() {
 		restoreMode()
 		ptmx.Close()
