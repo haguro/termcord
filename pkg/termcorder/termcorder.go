@@ -24,13 +24,14 @@ type Termcording struct {
 
 //Config represents the command configuration
 type Config struct {
-	Filename    string
-	CmdName     string
-	CmdArgs     []string
-	QuietMode   bool
-	Append      bool
-	Interactive bool
-	PrintHelp   bool
+	Filename      string
+	CmdName       string
+	CmdArgs       []string
+	QuietMode     bool
+	Append        bool
+	Interactive   bool
+	LogKeystrokes bool
+	PrintHelp     bool
 }
 
 const defaultFileName = "termcording"
@@ -74,12 +75,13 @@ func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, er
 	var fName, cmdName string
 	var cmdArgs []string
 
-	var h, q, a bool
+	var h, q, a, k bool
 
 	cli = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	cli.BoolVar(&h, "h", false, "Prints this message")
 	cli.BoolVar(&q, "q", false, "Quiet mode - suppresses the recording start and end prompts")
 	cli.BoolVar(&a, "a", false, "Appends to file instead of overwriting it")
+	cli.BoolVar(&k, "k", false, "Log key strokes to file as well")
 
 	cli.Parse(os.Args[1:])
 
@@ -103,13 +105,14 @@ func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, er
 	}
 
 	return NewTermcording(&Config{
-		Filename:    fName,
-		CmdName:     cmdName,
-		CmdArgs:     cmdArgs,
-		QuietMode:   q,
-		Append:      a,
-		Interactive: interactive,
-		PrintHelp:   h,
+		Filename:      fName,
+		CmdName:       cmdName,
+		CmdArgs:       cmdArgs,
+		QuietMode:     q,
+		Append:        a,
+		Interactive:   interactive,
+		LogKeystrokes: k,
+		PrintHelp:     h,
 	}, options...)
 }
 
@@ -122,6 +125,26 @@ func (tc *Termcording) Start() error {
 		printHelp(tc)
 		return nil
 	}
+
+	if tc.cmd == nil {
+		tc.cmd = exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
+	}
+
+	if !tc.Config.QuietMode {
+		fmt.Println("Starting recording session. CTRL-D to end.")
+		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
+	}
+
+	ptmx, restoreMode, err := ptmxFromCmd(tc.cmd, tc.Config.Interactive) //TODO convert to method.
+	if err != nil {
+		return err
+	}
+	defer func() {
+		restoreMode()
+		ptmx.Close()
+	}()
+
+	in := io.Writer(ptmx)
 	if tc.out == nil {
 		mode := os.O_TRUNC
 		if tc.Config.Append {
@@ -132,27 +155,14 @@ func (tc *Termcording) Start() error {
 			return err
 		}
 		defer f.Close()
+		if tc.Config.LogKeystrokes {
+			in = io.MultiWriter(ptmx, f)
+		}
 		tc.out = io.MultiWriter(os.Stdout, f)
 	}
-	if tc.cmd == nil {
-		tc.cmd = exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
-	}
-	if !tc.Config.QuietMode {
-		fmt.Println("Starting recording session. CTRL-D to end.")
-		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
-	}
-	ptmx, restoreMode, err := ptmxFromCmd(tc.cmd, tc.Config.Interactive) //TODO convert to method.
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		restoreMode()
-		ptmx.Close()
-	}()
 
 	go func() {
-		io.Copy(ptmx, os.Stdin)
+		io.Copy(in, os.Stdin)
 	}()
 
 	io.Copy(tc.out, ptmx)

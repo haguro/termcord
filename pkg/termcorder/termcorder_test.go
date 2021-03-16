@@ -22,14 +22,15 @@ func TestNewTermcording(t *testing.T) {
 func TestTermcordingFromFlags(t *testing.T) {
 	t.Parallel()
 	t.Run("Test setting flags", func(t *testing.T) {
-		os.Args = []string{"./termcord", "-h", "-q", "foo.txt", "bar", "baz"}
+		os.Args = []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
 		want := &termcorder.Config{
-			Filename:    "foo.txt",
-			CmdName:     "bar",
-			CmdArgs:     []string{"baz"},
-			Interactive: false,
-			PrintHelp:   true,
-			QuietMode:   true,
+			Filename:      "foo.txt",
+			CmdName:       "bar",
+			CmdArgs:       []string{"baz"},
+			Interactive:   false,
+			PrintHelp:     true,
+			QuietMode:     true,
+			LogKeystrokes: true,
 		}
 
 		got, err := termcorder.TermcordingFromFlags()
