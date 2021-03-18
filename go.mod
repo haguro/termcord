@@ -1,4 +1,4 @@
-module termcord
+module github.com/haguro/termcord
 
 go 1.16
 

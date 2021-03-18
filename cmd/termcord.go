@@ -2,7 +2,8 @@ package main
 
 import (
 	"log"
-	"termcord/pkg/termcorder"
+
+	"github.com/haguro/termcord/pkg/termcorder"
 )
 
 func main() {

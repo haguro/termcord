@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"termcord/pkg/termcorder"
+	"github.com/haguro/termcord/pkg/termcorder"
 
 	"github.com/stretchr/testify/assert"
 )
