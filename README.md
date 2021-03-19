@@ -4,10 +4,14 @@
 
 `termcord` is a terminal session recorder written in Go.
 
+## Installation
+1. Install Go.
+2. Run `go get -u github.com/haguro/termcord/cmd/termcord`.
+
 ## Features and usage
 `termcord` is still a *work in progress* and currently only supports minimal functionality.
 
-To start a recording session (session will be written to a file named _termcording_)
+To start a recording session (session will be written to a file named "termcording")
 
 ```
 $ termcord
@@ -22,7 +26,7 @@ $ cat termcording
 For usage information:
 
 ```
-$ termcording -h
+$ termcord -h
 ```
 
 The aim is for termcord to match and expand upon functionality of tools like `script`.
