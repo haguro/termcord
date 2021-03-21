@@ -193,7 +193,7 @@ func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinMode
 		// Set stdin in raw mode.
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to set input to raw mode: %s", err)
+			return nil, nil, fmt.Errorf("failed to set Stdin in raw mode: %s", err)
 		}
 		stdinModeRestore = func() { term.Restore(int(os.Stdin.Fd()), oldState) }
 	}
