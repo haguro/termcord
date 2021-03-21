@@ -63,7 +63,7 @@ func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcordin
 	for _, option := range options {
 		err := option(tc)
 		if err != nil {
-			return &Termcording{}, err
+			return nil, err
 		}
 	}
 	return tc, nil
