@@ -138,7 +138,7 @@ func (tc *Termcording) Start() error {
 
 	pterm, restoreMode, err := pseudoTermFromCmd(tc.cmd, tc.Config.Interactive)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create a pty from command: %s", err)
 	}
 	defer func() {
 		restoreMode()
