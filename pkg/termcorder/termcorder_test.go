@@ -14,9 +14,10 @@ import (
 func TestNewTermcording(t *testing.T) {
 	t.Parallel()
 	cfg := &termcorder.Config{}
+	var tc *termcorder.Termcording
 	tc, err := termcorder.NewTermcording(cfg)
-	assert.IsType(t, &termcorder.Termcording{}, tc)
 	assert.NoError(t, err)
+	assert.Equal(t, tc.Config, cfg)
 }
 
 func TestTermcordingFromFlags(t *testing.T) {
