@@ -150,7 +150,7 @@ func (tc *Termcording) Start() error {
 		if tc.Config.Append {
 			mode = os.O_APPEND
 		}
-		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|mode, 0755)
+		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|mode, 0700)
 		if err != nil {
 			return err
 		}
