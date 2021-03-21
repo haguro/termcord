@@ -171,9 +171,14 @@ func (tc *Termcording) Start() error {
 }
 
 func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinModeRestore func(), err error) {
-	pterm, err = pty.Start(c)
+	s, err := pty.GetsizeFull(os.Stdin)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get terminal size: %s", err)
+	}
+
+	pterm, err = pty.StartWithSize(c, s)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start the pty process: %s", err)
 	}
 
 	stdinModeRestore = func() {}
@@ -188,7 +193,6 @@ func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinMode
 				}
 			}
 		}()
-		ch <- syscall.SIGWINCH // Initial resize.
 
 		// Set stdin in raw mode.
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
