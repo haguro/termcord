@@ -20,6 +20,7 @@ type Termcording struct {
 	Config *Config
 	cmd    *exec.Cmd
 	out    io.Writer
+	in     io.Writer
 }
 
 //Config represents the command configuration
@@ -144,25 +145,17 @@ func (tc *Termcording) Start() error {
 		pterm.Close()
 	}()
 
-	in := io.Writer(pterm)
+	tc.in = io.Writer(pterm)
 	if tc.out == nil {
-		mode := os.O_TRUNC
-		if tc.Config.Append {
-			mode = os.O_APPEND
-		}
-		f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|mode, 0700)
+		closerFn, err := tc.setupWriters()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to set up recording outputs: %s", err)
 		}
-		defer f.Close()
-		if tc.Config.LogKeystrokes {
-			in = io.MultiWriter(pterm, f)
-		}
-		tc.out = io.MultiWriter(os.Stdout, f)
+		defer closerFn()
 	}
 
 	go func() {
-		io.Copy(in, os.Stdin)
+		io.Copy(tc.in, os.Stdin)
 	}()
 
 	io.Copy(tc.out, pterm)
@@ -170,12 +163,30 @@ func (tc *Termcording) Start() error {
 	return tc.cmd.Wait()
 }
 
-func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinModeRestore func(), err error) {
-	s, err := pty.GetsizeFull(os.Stdin)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get terminal size: %s", err)
+func (tc *Termcording) setupWriters() (closer func() error, err error) {
+	mode := os.O_TRUNC
+	if tc.Config.Append {
+		mode = os.O_APPEND
 	}
+	f, err := os.OpenFile(tc.Config.Filename, os.O_WRONLY|os.O_CREATE|mode, 0700)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open recording file: %s", err)
+	}
+	if tc.Config.LogKeystrokes {
+		tc.in = io.MultiWriter(tc.in, f)
+	}
+	tc.out = io.MultiWriter(os.Stdout, f)
+	return f.Close, nil
+}
 
+func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinModeRestore func(), err error) {
+	var s *pty.Winsize
+	if interactive {
+		s, err = pty.GetsizeFull(os.Stdin)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get terminal size: %s", err)
+		}
+	}
 	pterm, err = pty.StartWithSize(c, s)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start the pty process: %s", err)
