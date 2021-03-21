@@ -42,7 +42,7 @@ func TestTermcordingFromFlags(t *testing.T) {
 	t.Run("Test setting filename", func(t *testing.T) {
 		os.Args = []string{"./termcord", "foo.txt"}
 		want := "foo.txt"
-		shell, _ := os.LookupEnv("SHELL")
+		shell := os.Getenv("SHELL")
 		defer os.Setenv("SHELL", shell)
 		shell = "/foo/bar"
 		os.Setenv("SHELL", shell)
