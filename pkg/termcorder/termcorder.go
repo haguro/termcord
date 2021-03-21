@@ -135,16 +135,16 @@ func (tc *Termcording) Start() error {
 		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
 	}
 
-	ptmx, restoreMode, err := ptmxFromCmd(tc.cmd, tc.Config.Interactive) //TODO convert to method.
+	pterm, restoreMode, err := pseudoTermFromCmd(tc.cmd, tc.Config.Interactive)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		restoreMode()
-		ptmx.Close()
+		pterm.Close()
 	}()
 
-	in := io.Writer(ptmx)
+	in := io.Writer(pterm)
 	if tc.out == nil {
 		mode := os.O_TRUNC
 		if tc.Config.Append {
@@ -156,7 +156,7 @@ func (tc *Termcording) Start() error {
 		}
 		defer f.Close()
 		if tc.Config.LogKeystrokes {
-			in = io.MultiWriter(ptmx, f)
+			in = io.MultiWriter(pterm, f)
 		}
 		tc.out = io.MultiWriter(os.Stdout, f)
 	}
@@ -165,25 +165,25 @@ func (tc *Termcording) Start() error {
 		io.Copy(in, os.Stdin)
 	}()
 
-	io.Copy(tc.out, ptmx)
+	io.Copy(tc.out, pterm)
 
 	return tc.cmd.Wait()
 }
 
-func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
-	modeRestoreFn := func() {}
-
-	ptmx, err := pty.Start(c)
+func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinModeRestore func(), err error) {
+	pterm, err = pty.Start(c)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	stdinModeRestore = func() {}
 	if interactive {
 		// Handle pty size.
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, syscall.SIGWINCH)
 		go func() {
 			for range ch {
-				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+				if err := pty.InheritSize(os.Stdin, pterm); err != nil {
 					log.Printf("error resizing pty: %s", err)
 				}
 			}
@@ -193,11 +193,11 @@ func ptmxFromCmd(c *exec.Cmd, interactive bool) (*os.File, func(), error) {
 		// Set stdin in raw mode.
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
-			log.Fatalf("failed to set input to raw mode: %s", err)
+			return nil, nil, fmt.Errorf("failed to set input to raw mode: %s", err)
 		}
-		modeRestoreFn = func() { term.Restore(int(os.Stdin.Fd()), oldState) }
+		stdinModeRestore = func() { term.Restore(int(os.Stdin.Fd()), oldState) }
 	}
-	return ptmx, modeRestoreFn, err
+	return pterm, stdinModeRestore, err
 }
 
 func printHelp(tc *Termcording) {
