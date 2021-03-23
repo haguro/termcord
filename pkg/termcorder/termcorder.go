@@ -72,19 +72,19 @@ func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcordin
 
 //FromFlags parses command line flags (and arguments) and returns a pointer to a
 //new variable of type `Termcording`.
-func FromFlags(options ...func(*Termcording) error) (*Termcording, error) {
+func FromFlags(args []string, options ...func(*Termcording) error) (*Termcording, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 
 	var h, q, a, k bool
 
-	cli = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	cli = flag.NewFlagSet(args[0], flag.ExitOnError)
 	cli.BoolVar(&h, "h", false, "Prints this message")
 	cli.BoolVar(&q, "q", false, "Quiet mode - suppresses the recording start and end prompts")
 	cli.BoolVar(&a, "a", false, "Appends to file instead of overwriting it")
 	cli.BoolVar(&k, "k", false, "Log key strokes to file as well")
 
-	cli.Parse(os.Args[1:])
+	cli.Parse(args[1:])
 
 	shell, ok := os.LookupEnv("SHELL")
 	if cli.Arg(1) == "" && (!ok || shell == "") {
@@ -216,9 +216,9 @@ func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinMode
 }
 
 func printHelp(tc *Termcording) {
-	fmt.Fprintf(tc.out, "termcord is a terminal session recorder written in Go.\n\n")
-	fmt.Fprintf(tc.out, "Usage: %s [options] [filename [command...]]\n", os.Args[0])
-	fmt.Fprintf(tc.out, "Options:\n")
+	fmt.Fprint(tc.out, "termcord is a terminal session recorder written in Go.\n\n")
+	fmt.Fprint(tc.out, "Usage: termcord [options] [filename [command...]]\n")
+	fmt.Fprint(tc.out, "Options:\n")
 	cli.VisitAll(func(f *flag.Flag) {
 		fmt.Fprintf(tc.out, "  -%s	%s\n", f.Name, f.Usage)
 	})

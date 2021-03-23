@@ -21,7 +21,7 @@ func TestNewTermcording(t *testing.T) {
 }
 
 func TestFromFlagsSettingFlags(t *testing.T) {
-	os.Args = []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
+	args := []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
 	want := &termcorder.Config{
 		Filename:      "foo.txt",
 		CmdName:       "bar",
@@ -32,79 +32,79 @@ func TestFromFlagsSettingFlags(t *testing.T) {
 		LogKeystrokes: true,
 	}
 
-	got, err := termcorder.FromFlags()
+	got, err := termcorder.FromFlags(args)
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got.Config)
 }
 func TestFromFlagsSettingFilename(t *testing.T) {
-	os.Args = []string{"./termcord", "foo.txt"}
+	args := []string{"./termcord", "foo.txt"}
 	want := "foo.txt"
 	shell := os.Getenv("SHELL")
 	defer os.Setenv("SHELL", shell)
 	shell = "/foo/bar"
 	os.Setenv("SHELL", shell)
-	got, err := termcorder.FromFlags()
+	got, err := termcorder.FromFlags(args)
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got.Config.Filename)
 }
 
 func TestFromFlagsDafaultToShell(t *testing.T) {
-	os.Args = []string{"./termcord"}
+	args := []string{"./termcord"}
 	shell, _ := os.LookupEnv("SHELL")
 	defer os.Setenv("SHELL", shell)
 	shell = "/foo/bar"
 	os.Setenv("SHELL", shell)
-	got, err := termcorder.FromFlags()
+	got, err := termcorder.FromFlags(args)
 
 	assert.NoError(t, err)
 	assert.Equal(t, shell, got.Config.CmdName)
 }
 
 func TestFromFlagsDefaultToShellWithFilename(t *testing.T) {
-	os.Args = []string{"./termcord", "foo.txt"}
+	args := []string{"./termcord", "foo.txt"}
 	shell, _ := os.LookupEnv("SHELL")
 	defer os.Setenv("SHELL", shell)
 	shell = "/foo/bar"
 	os.Setenv("SHELL", shell)
-	got, err := termcorder.FromFlags()
+	got, err := termcorder.FromFlags(args)
 
 	assert.NoError(t, err)
 	assert.Equal(t, shell, got.Config.CmdName)
 }
 
 func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
-	os.Args = []string{"./termcord"}
+	args := []string{"./termcord"}
 	shell, _ := os.LookupEnv("SHELL")
 	defer os.Setenv("SHELL", shell)
 	os.Unsetenv("SHELL")
-	_, err := termcorder.FromFlags()
+	_, err := termcorder.FromFlags(args)
 
 	assert.Error(t, err)
 }
 
 func TestStartRecordingCommand(t *testing.T) {
-		buf := &bytes.Buffer{}
-		cmd := exec.Command("echo", "success!")
-		cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
-		tc, err := termcorder.NewTermcording(cfg, termcorder.Cmd(cmd), termcorder.Output(buf))
-		assert.NoError(t, err)
-		tc.Start()
+	buf := &bytes.Buffer{}
+	cmd := exec.Command("echo", "success!")
+	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
+	tc, err := termcorder.NewTermcording(cfg, termcorder.Cmd(cmd), termcorder.Output(buf))
+	assert.NoError(t, err)
+	tc.Start()
 
-		want := "success!"
-		got := buf.String()
-		assert.Contains(t, got, want)
+	want := "success!"
+	got := buf.String()
+	assert.Contains(t, got, want)
 }
 
 func TestStartPrintingHelp(t *testing.T) {
-		buf := &bytes.Buffer{}
-		cfg := &termcorder.Config{Filename: "termcording", PrintHelp: true}
-		tc, err := termcorder.NewTermcording(cfg, termcorder.Output(buf))
-		assert.NoError(t, err)
-		tc.Start()
+	buf := &bytes.Buffer{}
+	cfg := &termcorder.Config{Filename: "termcording", PrintHelp: true}
+	tc, err := termcorder.NewTermcording(cfg, termcorder.Output(buf))
+	assert.NoError(t, err)
+	tc.Start()
 
-		want := "Usage:"
-		got := buf.String()
-		assert.Contains(t, got, want)
+	want := "Usage:"
+	got := buf.String()
+	assert.Contains(t, got, want)
 }
