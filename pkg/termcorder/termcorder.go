@@ -70,9 +70,9 @@ func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcordin
 	return tc, nil
 }
 
-//TermcordingFromFlags parses command line flags (and arguments) and returns a pointer to a
+//FromFlags parses command line flags (and arguments) and returns a pointer to a
 //new variable of type `Termcording`.
-func TermcordingFromFlags(options ...func(*Termcording) error) (*Termcording, error) {
+func FromFlags(options ...func(*Termcording) error) (*Termcording, error) {
 	var fName, cmdName string
 	var cmdArgs []string
 

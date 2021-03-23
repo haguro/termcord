@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	tc, err := termcorder.TermcordingFromFlags()
+	tc, err := termcorder.FromFlags()
 	if err != nil {
 		log.Fatal(err)
 	}

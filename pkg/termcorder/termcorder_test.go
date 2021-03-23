@@ -20,72 +20,68 @@ func TestNewTermcording(t *testing.T) {
 	assert.Equal(t, tc.Config, cfg)
 }
 
-func TestTermcordingFromFlags(t *testing.T) {
-	t.Parallel()
-	t.Run("Test setting flags", func(t *testing.T) {
-		os.Args = []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
-		want := &termcorder.Config{
-			Filename:      "foo.txt",
-			CmdName:       "bar",
-			CmdArgs:       []string{"baz"},
-			Interactive:   false,
-			PrintHelp:     true,
-			QuietMode:     true,
-			LogKeystrokes: true,
-		}
+func TestFromFlagsSettingFlags(t *testing.T) {
+	os.Args = []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
+	want := &termcorder.Config{
+		Filename:      "foo.txt",
+		CmdName:       "bar",
+		CmdArgs:       []string{"baz"},
+		Interactive:   false,
+		PrintHelp:     true,
+		QuietMode:     true,
+		LogKeystrokes: true,
+	}
 
-		got, err := termcorder.TermcordingFromFlags()
+	got, err := termcorder.FromFlags()
 
-		assert.NoError(t, err)
-		assert.Equal(t, want, got.Config)
-	})
+	assert.NoError(t, err)
+	assert.Equal(t, want, got.Config)
+}
+func TestFromFlagsSettingFilename(t *testing.T) {
+	os.Args = []string{"./termcord", "foo.txt"}
+	want := "foo.txt"
+	shell := os.Getenv("SHELL")
+	defer os.Setenv("SHELL", shell)
+	shell = "/foo/bar"
+	os.Setenv("SHELL", shell)
+	got, err := termcorder.FromFlags()
 
-	t.Run("Test setting filename", func(t *testing.T) {
-		os.Args = []string{"./termcord", "foo.txt"}
-		want := "foo.txt"
-		shell := os.Getenv("SHELL")
-		defer os.Setenv("SHELL", shell)
-		shell = "/foo/bar"
-		os.Setenv("SHELL", shell)
-		got, err := termcorder.TermcordingFromFlags()
+	assert.NoError(t, err)
+	assert.Equal(t, want, got.Config.Filename)
+}
 
-		assert.NoError(t, err)
-		assert.Equal(t, want, got.Config.Filename)
-	})
+func TestFromFlagsDafaultToShell(t *testing.T) {
+	os.Args = []string{"./termcord"}
+	shell, _ := os.LookupEnv("SHELL")
+	defer os.Setenv("SHELL", shell)
+	shell = "/foo/bar"
+	os.Setenv("SHELL", shell)
+	got, err := termcorder.FromFlags()
 
-	t.Run("Default to current shell if no command is provided", func(t *testing.T) {
-		os.Args = []string{"./termcord"}
-		shell, _ := os.LookupEnv("SHELL")
-		defer os.Setenv("SHELL", shell)
-		shell = "/foo/bar"
-		os.Setenv("SHELL", shell)
-		got, err := termcorder.TermcordingFromFlags()
+	assert.NoError(t, err)
+	assert.Equal(t, shell, got.Config.CmdName)
+}
 
-		assert.NoError(t, err)
-		assert.Equal(t, shell, got.Config.CmdName)
-	})
-	t.Run("Default to current shell if no command is provided (custom filename set)", func(t *testing.T) {
-		os.Args = []string{"./termcord", "foo.txt"}
-		shell, _ := os.LookupEnv("SHELL")
-		defer os.Setenv("SHELL", shell)
-		shell = "/foo/bar"
-		os.Setenv("SHELL", shell)
-		got, err := termcorder.TermcordingFromFlags()
+func TestFromFlagsDefaultToShellWithFilename(t *testing.T) {
+	os.Args = []string{"./termcord", "foo.txt"}
+	shell, _ := os.LookupEnv("SHELL")
+	defer os.Setenv("SHELL", shell)
+	shell = "/foo/bar"
+	os.Setenv("SHELL", shell)
+	got, err := termcorder.FromFlags()
 
-		assert.NoError(t, err)
-		assert.Equal(t, shell, got.Config.CmdName)
-	})
+	assert.NoError(t, err)
+	assert.Equal(t, shell, got.Config.CmdName)
+}
 
-	t.Run("Return an error if shell is not set and no command is provided", func(t *testing.T) {
-		os.Args = []string{"./termcord"}
-		shell, _ := os.LookupEnv("SHELL")
-		defer os.Setenv("SHELL", shell)
-		os.Unsetenv("SHELL")
-		_, err := termcorder.TermcordingFromFlags()
+func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
+	os.Args = []string{"./termcord"}
+	shell, _ := os.LookupEnv("SHELL")
+	defer os.Setenv("SHELL", shell)
+	os.Unsetenv("SHELL")
+	_, err := termcorder.FromFlags()
 
-		assert.Error(t, err)
-	})
-
+	assert.Error(t, err)
 }
 
 func TestStart(t *testing.T) {
