@@ -84,9 +84,7 @@ func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestStart(t *testing.T) {
-	t.Parallel()
-	t.Run("Test recording a simple command", func(t *testing.T) {
+func TestStartRecordingCommand(t *testing.T) {
 		buf := &bytes.Buffer{}
 		cmd := exec.Command("echo", "success!")
 		cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
@@ -97,8 +95,9 @@ func TestStart(t *testing.T) {
 		want := "success!"
 		got := buf.String()
 		assert.Contains(t, got, want)
-	})
-	t.Run("Test printing help when -h is passed", func(t *testing.T) {
+}
+
+func TestStartPrintingHelp(t *testing.T) {
 		buf := &bytes.Buffer{}
 		cfg := &termcorder.Config{Filename: "termcording", PrintHelp: true}
 		tc, err := termcorder.NewTermcording(cfg, termcorder.Output(buf))
@@ -108,6 +107,4 @@ func TestStart(t *testing.T) {
 		want := "Usage:"
 		got := buf.String()
 		assert.Contains(t, got, want)
-
-	})
 }
