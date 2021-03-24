@@ -52,7 +52,7 @@ func TestFromFlagsSettingFilename(t *testing.T) {
 
 func TestFromFlagsDafaultToShell(t *testing.T) {
 	args := []string{"./termcord"}
-	shell, _ := os.LookupEnv("SHELL")
+	shell := os.Getenv("SHELL")
 	defer os.Setenv("SHELL", shell)
 	shell = "/foo/bar"
 	os.Setenv("SHELL", shell)
@@ -60,16 +60,6 @@ func TestFromFlagsDafaultToShell(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, shell, got.Config.CmdName)
-}
-
-func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
-	args := []string{"./termcord"}
-	shell, _ := os.LookupEnv("SHELL")
-	defer os.Setenv("SHELL", shell)
-	os.Unsetenv("SHELL")
-	_, err := termcorder.FromFlags(args)
-
-	assert.Error(t, err)
 }
 
 func TestFromFlagsSetCmdName(t *testing.T) {
@@ -112,4 +102,15 @@ func TestStartPrintingHelp(t *testing.T) {
 	want := "Usage:"
 	got := buf.String()
 	assert.Contains(t, got, want)
+}
+
+func TestStartErrorIfNoShellAndNoCommand(t *testing.T) {
+	args := []string{"./termcord"}
+	shell := os.Getenv("SHELL")
+	defer os.Setenv("SHELL", shell)
+	os.Unsetenv("SHELL")
+	tc, err := termcorder.FromFlags(args)
+	assert.NoError(t, err)
+	err = tc.Start()
+	assert.Error(t, err)
 }

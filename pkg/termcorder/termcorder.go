@@ -86,15 +86,15 @@ func FromFlags(args []string, options ...func(*Termcording) error) (*Termcording
 	cli.BoolVar(&i, "i", false, "Run command as interactive. Essential when passing an shell executable as the command argument")
 	cli.StringVar(&f, "f", defaultFileName, "Sets recording filename")
 
-	cli.Parse(args[1:])
+	err := cli.Parse(args[1:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse command arguments: %s", err)
+	}
 
 	switch cli.NArg() {
 	case 0:
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			return nil, errors.New("shell empty or not set")
-		}
-		cmdName, i = shell, true
+		cmdName = os.Getenv("SHELL")
+		i = true
 	case 1:
 		cmdName = cli.Arg(0)
 	default:
@@ -126,6 +126,9 @@ func (tc *Termcording) Start() error {
 	}
 
 	if tc.cmd == nil {
+		if tc.Config.CmdName == "" {
+			return errors.New("shell/command empty or not set")
+		}
 		tc.cmd = exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
 	}
 
