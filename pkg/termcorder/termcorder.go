@@ -74,45 +74,41 @@ func NewTermcording(c *Config, options ...func(*Termcording) error) (*Termcordin
 //FromFlags parses command line flags (and arguments) and returns a pointer to a
 //new variable of type `Termcording`.
 func FromFlags(args []string, options ...func(*Termcording) error) (*Termcording, error) {
-	var fName, cmdName string
+	var cmdName, f string
 	var cmdArgs []string
-
-	var h, q, a, k bool
+	var h, q, a, k, i bool
 
 	cli = flag.NewFlagSet(args[0], flag.ExitOnError)
 	cli.BoolVar(&h, "h", false, "Prints this message")
 	cli.BoolVar(&q, "q", false, "Quiet mode - suppresses the recording start and end prompts")
 	cli.BoolVar(&a, "a", false, "Appends to file instead of overwriting it")
 	cli.BoolVar(&k, "k", false, "Log key strokes to file as well")
+	cli.BoolVar(&i, "i", false, "Run command as interactive. Essential when passing an shell executable as the command argument")
+	cli.StringVar(&f, "f", defaultFileName, "Sets recording filename")
 
 	cli.Parse(args[1:])
 
-	shell, ok := os.LookupEnv("SHELL")
-	if cli.Arg(1) == "" && (!ok || shell == "") {
-		return &Termcording{}, errors.New("shell not set")
-	}
-	interactive := true
 	switch cli.NArg() {
 	case 0:
-		fName = defaultFileName
-		cmdName = shell
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			return nil, errors.New("shell empty or not set")
+		}
+		cmdName, i = shell, true
 	case 1:
-		fName = cli.Arg(0)
-		cmdName = shell
+		cmdName = cli.Arg(0)
 	default:
-		fName = cli.Arg(0)
-		cmdName = cli.Arg(1)
-		cmdArgs = cli.Args()[2:]
-		interactive = false
+		cmdName = cli.Arg(0)
+		cmdArgs = cli.Args()[1:]
 	}
 
 	return NewTermcording(&Config{
-		Filename:      fName,
+		Filename:      f,
 		CmdName:       cmdName,
 		CmdArgs:       cmdArgs,
 		QuietMode:     q,
 		Append:        a,
-		Interactive:   interactive,
+		Interactive:   i,
 		LogKeystrokes: k,
 		PrintHelp:     h,
 	}, options...)

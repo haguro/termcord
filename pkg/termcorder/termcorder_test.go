@@ -21,12 +21,13 @@ func TestNewTermcording(t *testing.T) {
 }
 
 func TestFromFlagsSettingFlags(t *testing.T) {
-	args := []string{"./termcord", "-h", "-q", "-k", "foo.txt", "bar", "baz"}
+	t.Parallel()
+	args := []string{"./termcord", "-h", "-q", "-k", "-i", "-f", "foo.txt", "bar", "baz"}
 	want := &termcorder.Config{
 		Filename:      "foo.txt",
 		CmdName:       "bar",
 		CmdArgs:       []string{"baz"},
-		Interactive:   false,
+		Interactive:   true,
 		PrintHelp:     true,
 		QuietMode:     true,
 		LogKeystrokes: true,
@@ -37,10 +38,11 @@ func TestFromFlagsSettingFlags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, got.Config)
 }
+
 func TestFromFlagsSettingFilename(t *testing.T) {
-	args := []string{"./termcord", "foo.txt"}
+	args := []string{"./termcord", "-f", "foo.txt"}
 	want := "foo.txt"
-	shell := os.Getenv("SHELL")
+	shell := os.Getenv("SHELL") //TODO This is not nice. mock this and run the test in Parallel.
 	defer os.Setenv("SHELL", shell)
 	shell = "/foo/bar"
 	os.Setenv("SHELL", shell)
@@ -62,18 +64,6 @@ func TestFromFlagsDafaultToShell(t *testing.T) {
 	assert.Equal(t, shell, got.Config.CmdName)
 }
 
-func TestFromFlagsDefaultToShellWithFilename(t *testing.T) {
-	args := []string{"./termcord", "foo.txt"}
-	shell, _ := os.LookupEnv("SHELL")
-	defer os.Setenv("SHELL", shell)
-	shell = "/foo/bar"
-	os.Setenv("SHELL", shell)
-	got, err := termcorder.FromFlags(args)
-
-	assert.NoError(t, err)
-	assert.Equal(t, shell, got.Config.CmdName)
-}
-
 func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
 	args := []string{"./termcord"}
 	shell, _ := os.LookupEnv("SHELL")
@@ -84,7 +74,26 @@ func TestFromFlagsErrorIfNoShellAndNoCommand(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestFromFlagsSetCmdName(t *testing.T) {
+	args := []string{"./termcord", "foo"}
+	got, err := termcorder.FromFlags(args)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", got.Config.CmdName)
+}
+
+func TestFromFlagsSetCmdNameAndCmdArgs(t *testing.T) {
+	t.Parallel()
+	args := []string{"./termcord", "foo", "bar", "-baz"}
+	got, err := termcorder.FromFlags(args)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", got.Config.CmdName)
+	assert.Equal(t, []string{"bar", "-baz"}, got.Config.CmdArgs)
+}
+
 func TestStartRecordingCommand(t *testing.T) {
+	t.Parallel()
 	buf := &bytes.Buffer{}
 	cmd := exec.Command("echo", "success!")
 	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
