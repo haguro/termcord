@@ -98,9 +98,10 @@ func TestStartRecordingCommand(t *testing.T) {
 }
 
 func TestStartPrintingHelp(t *testing.T) {
+	t.Parallel()
+	args := []string{"./termcord", "-h"}
 	buf := &bytes.Buffer{}
-	cfg := &termcorder.Config{Filename: "termcording", PrintHelp: true}
-	tc, err := termcorder.NewTermcording(cfg, termcorder.Output(buf))
+	tc, err := termcorder.FromFlags(args, termcorder.Output(buf))
 	assert.NoError(t, err)
 	tc.Start()
 

@@ -120,10 +120,11 @@ func FromFlags(args []string, options ...func(*Termcording) error) (*Termcording
 //Start runs the tc.cmd in a pseudo-terminal and writes all output to tc.out
 func (tc *Termcording) Start() error {
 	if tc.Config.PrintHelp {
-		if tc.out == nil {
-			tc.out = os.Stdout
+		w := tc.out
+		if w == nil {
+			w = os.Stdout
 		}
-		printHelp(tc)
+		printHelp(w)
 		return nil
 	}
 
@@ -215,11 +216,11 @@ func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinMode
 	return pterm, stdinModeRestore, err
 }
 
-func printHelp(tc *Termcording) {
-	fmt.Fprint(tc.out, "termcord is a terminal session recorder written in Go.\n\n")
-	fmt.Fprint(tc.out, "Usage: termcord [options] [filename [command...]]\n")
-	fmt.Fprint(tc.out, "Options:\n")
+func printHelp(w io.Writer) {
+	fmt.Fprint(w, "termcord is a terminal session recorder written in Go.\n\n")
+	fmt.Fprint(w, "Usage: termcord [options] [command [arguments...]]\n")
+	fmt.Fprint(w, "Options:\n")
 	cli.VisitAll(func(f *flag.Flag) {
-		fmt.Fprintf(tc.out, "  -%s	%s\n", f.Name, f.Usage)
+		fmt.Fprintf(w, "  -%s	%s\n", f.Name, f.Usage)
 	})
 }
