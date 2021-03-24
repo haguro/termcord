@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 	"golang.org/x/term"
@@ -173,11 +174,18 @@ func (tc *Termcording) setupWriters() (closer func() error, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open recording file: %s", err)
 	}
+	fmt.Fprintf(f, "Recording started on %s\n", time.Now().Format(time.RFC1123))
+	closer = func() error {
+		fmt.Fprintf(f, "Recording ended on %s\n", time.Now().Format(time.RFC1123))
+		return f.Close()
+	}
+
 	if tc.Config.LogKeystrokes {
 		tc.in = io.MultiWriter(tc.in, f)
 	}
 	tc.out = io.MultiWriter(os.Stdout, f)
-	return f.Close, nil
+
+	return closer, nil
 }
 
 func pseudoTermFromCmd(c *exec.Cmd, interactive bool) (pterm *os.File, stdinModeRestore func(), err error) {
