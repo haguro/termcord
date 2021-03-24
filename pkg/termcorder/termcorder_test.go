@@ -12,7 +12,6 @@ import (
 )
 
 func TestNewTermcording(t *testing.T) {
-	t.Parallel()
 	cfg := &termcorder.Config{}
 	var tc *termcorder.Termcording
 	tc, err := termcorder.NewTermcording(cfg)
@@ -21,7 +20,6 @@ func TestNewTermcording(t *testing.T) {
 }
 
 func TestFromFlagsSettingFlags(t *testing.T) {
-	t.Parallel()
 	args := []string{"./termcord", "-h", "-q", "-k", "-i", "-f", "foo.txt", "bar", "baz"}
 	want := &termcorder.Config{
 		Filename:      "foo.txt",
@@ -83,7 +81,6 @@ func TestFromFlagsSetCmdName(t *testing.T) {
 }
 
 func TestFromFlagsSetCmdNameAndCmdArgs(t *testing.T) {
-	t.Parallel()
 	args := []string{"./termcord", "foo", "bar", "-baz"}
 	got, err := termcorder.FromFlags(args)
 
@@ -93,7 +90,6 @@ func TestFromFlagsSetCmdNameAndCmdArgs(t *testing.T) {
 }
 
 func TestStartRecordingCommand(t *testing.T) {
-	t.Parallel()
 	buf := &bytes.Buffer{}
 	cmd := exec.Command("echo", "success!")
 	cfg := &termcorder.Config{Filename: "termcording", Interactive: false}
@@ -107,7 +103,6 @@ func TestStartRecordingCommand(t *testing.T) {
 }
 
 func TestStartPrintingHelp(t *testing.T) {
-	t.Parallel()
 	args := []string{"./termcord", "-h"}
 	buf := &bytes.Buffer{}
 	tc, err := termcorder.FromFlags(args, termcorder.Output(buf))
