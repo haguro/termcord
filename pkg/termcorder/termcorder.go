@@ -131,7 +131,7 @@ func (tc *Termcording) Start() error {
 		tc.cmd = exec.Command(tc.Config.CmdName, tc.Config.CmdArgs...)
 	}
 
-	if !tc.Config.QuietMode {
+	if !tc.Config.QuietMode && tc.out == nil {
 		fmt.Println("Starting recording session. CTRL-D to end.")
 		defer fmt.Printf("\nRecording session ended. Session saved to %s\n", tc.Config.Filename)
 	}
