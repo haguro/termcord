@@ -5,8 +5,12 @@
 `termcord` is a terminal session recorder written in Go. It works by running a shell or a command in a pseudo-terminal and writing its output (optionally, its input as well) to a file. The aim for termcord is to match and expand upon the functionality of tools like `script`.
 
 ## Installation
-1. Install Go.
-2. Run `go get -u github.com/haguro/termcord/cmd/termcord`.
+Download the [latest release](https://github.com/haguro/termcord/releases/latest) for your system.
+
+Or install with `go install`:
+```
+go install github.com/haguro/termcord@latest
+```
 
 ## Features and usage
 To start recording a shell session (session will be written to a file named by "termcording" by default):
