@@ -11,8 +11,8 @@ import (
 	"github.com/haguro/termcord/pkg/tc"
 )
 
-const defaultFileName = "termcording"
-const envVar = "TERMCORDING"
+const DefaultFileName = "termcording"
+const EnvVar = "TERMCORDING"
 
 type request struct {
 	flagSet     *flag.FlagSet
@@ -26,7 +26,21 @@ type request struct {
 	filename    string
 }
 
-func Run(args []string, in io.Reader, out, errOut io.Writer) int {
+type RecorderSetupFunc func(string, bool) (io.ReadWriteCloser, error)
+
+func FileRecorderSetup(filename string, append bool) (file io.ReadWriteCloser, err error) {
+	mode := os.O_TRUNC
+	if append {
+		mode = os.O_APPEND
+	}
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|mode, 0700)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup RecorderSetupFunc) int {
 	r, err := parseFlags(args, errOut)
 	if err != nil && true {
 		fmt.Fprintf(errOut, "failed to parse command line arguments: %s", err)
@@ -38,22 +52,20 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return 0
 	}
 
+	//TODO don't start if envVar is set?
+
 	options := []tc.OptionFunc{}
 
 	c := exec.Command(r.command, r.args...)
 
 	if in == os.Stdin && r.interactive {
 		options = append(options, tc.RawMode)
-		options = append(options, tc.InheritSizeFrom(in.(*os.File)))
+		options = append(options, tc.InheritSizeFrom(os.Stdin))
 	}
 
-	mode := os.O_TRUNC
-	if r.append {
-		mode = os.O_APPEND
-	}
-	f, err := os.OpenFile(r.filename, os.O_WRONLY|os.O_CREATE|mode, 0700)
+	f, err := recorderSetup(r.filename, r.append)
 	if err != nil {
-		fmt.Fprintf(errOut, "failed to open file: %s", err)
+		fmt.Fprintf(errOut, "failed to set up recorder: %s", err)
 		return -1
 	}
 	fmt.Fprintf(f, "Recording started on %s\n", time.Now().Format(time.RFC1123))
@@ -72,8 +84,7 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		defer fmt.Fprintf(out, "Recording session ended. Session saved to %s\n", r.filename)
 	}
 
-	//TODO don't start if the env variable is set?
-	os.Setenv(envVar, c.String())
+	os.Setenv(EnvVar, c.String())
 
 	err = tc.Record(c, options...)
 	if err != nil {
@@ -94,8 +105,8 @@ func parseFlags(args []string, errOut io.Writer) (*request, error) {
 	fs.BoolVar(&r.quiet, "q", false, "Quiet mode - suppresses the recording start and end prompts")
 	fs.BoolVar(&r.append, "a", false, "Appends to file instead of overwriting it")
 	fs.BoolVar(&r.logInput, "k", false, "Log key strokes to file as well")
-	fs.BoolVar(&r.interactive, "i", false, "Run command as interactive. Essential when passing an shell executable as the command argument")
-	fs.StringVar(&r.filename, "f", defaultFileName, "Sets recording filename")
+	fs.BoolVar(&r.interactive, "i", false, "Run command as interactive. Essential when passing a shell executable as the command argument")
+	fs.StringVar(&r.filename, "f", DefaultFileName, "Sets recording filename")
 
 	err := fs.Parse(args[1:])
 	if err != nil {
