@@ -26,7 +26,8 @@ type Termcorder struct {
 type OptionFunc func(*Termcorder) error
 
 func RawMode(t *Termcorder) error {
-	s, err := term.MakeRaw(int(os.Stdin.Fd())) //TODO only needed when input is the Standard In
+	//TODO only needed when input is the Standard In. Does this even belong in this package or should it be handled by the caller instead?
+	s, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		return fmt.Errorf("failed to set Stdin in raw mode: %s", err)
 	}
