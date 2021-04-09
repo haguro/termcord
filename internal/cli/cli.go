@@ -42,7 +42,7 @@ func FileRecorderSetup(filename string, append bool) (file io.ReadWriteCloser, e
 
 func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup RecorderSetupFunc) int {
 	r, err := parseFlags(args, errOut)
-	if err != nil && true {
+	if err != nil {
 		fmt.Fprintf(errOut, "failed to parse command line arguments: %s", err)
 		return -1
 	}
@@ -113,6 +113,10 @@ func parseFlags(args []string, errOut io.Writer) (*request, error) {
 		return nil, err
 	}
 	r.flagSet = fs
+
+	if r.help {
+		return &r, nil
+	}
 
 	switch fs.NArg() {
 	case 0:
