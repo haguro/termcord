@@ -16,6 +16,7 @@ import (
 type Termcorder struct {
 	cmd           *exec.Cmd
 	pty           *os.File
+	tty           *os.File
 	outputWriter  io.Writer
 	inputWriter   io.Writer
 	outputReader  io.Reader
@@ -104,6 +105,7 @@ func (t *Termcorder) Start() error {
 		t.pty.Close()
 		return err
 	}
+	t.tty.Close()
 	defer t.pty.Close()
 	defer t.restoreTermState()
 
@@ -135,11 +137,13 @@ func (t *Termcorder) setupPty() error {
 	if err != nil {
 		return err
 	}
+
 	if t.cmd.SysProcAttr == nil {
 		t.cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	t.cmd.SysProcAttr.Setsid = true
 	t.cmd.SysProcAttr.Setctty = true
+
 	if t.cmd.Stdin == nil {
 		t.cmd.Stdin = pts
 	}
@@ -149,7 +153,9 @@ func (t *Termcorder) setupPty() error {
 	if t.cmd.Stderr == nil {
 		t.cmd.Stderr = pts
 	}
+
 	t.pty = ptm
+	t.tty = pts
 
 	return nil
 }
