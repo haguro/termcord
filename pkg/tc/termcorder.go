@@ -13,21 +13,25 @@ import (
 	"golang.org/x/term"
 )
 
+// Termcorder holds all values required to record a command run.
 type Termcorder struct {
 	cmd           *exec.Cmd
 	pty           *os.File
 	tty           *os.File
-	outputWriter  io.Writer
-	inputWriter   io.Writer
-	outputReader  io.Reader
-	inputReader   io.Reader
+	outputWriters io.Writer
+	inputWriters  io.Writer
+	outputReaders io.Reader
+	inputReaders  io.Reader
 	prevTermState *term.State
 }
 
+// OptionFunc defines a parameter function.
 type OptionFunc func(*Termcorder) error
 
+// RawMode sets standard in in raw mode.
 func RawMode(t *Termcorder) error {
-	//TODO only needed when input is the Standard In. Does this even belong in this package or should it be handled by the caller instead?
+	// TODO only needed when input is the Standard In. Does this even belong in this package
+	// or should it be handled by the caller instead?
 	s, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		return fmt.Errorf("failed to set Stdin in raw mode: %s", err)
@@ -36,6 +40,8 @@ func RawMode(t *Termcorder) error {
 	return nil
 }
 
+// InheritSizeFrom sets up and returns a parameter function that initially sets the size
+// of pty, then launches the resize handler in a go routine.
 func InheritSizeFrom(from *os.File) OptionFunc {
 	return func(t *Termcorder) error {
 		if t.pty == nil {
@@ -50,31 +56,39 @@ func InheritSizeFrom(from *os.File) OptionFunc {
 	}
 }
 
+// WithOutputWriters sets up and returns a parameter function that sets the recorder's
+// output writers (where the pty's output is copied to).
 func WithOutputWriters(writers ...io.Writer) OptionFunc {
 	return func(t *Termcorder) error {
-		t.outputWriter = io.MultiWriter(writers...)
+		t.outputWriters = io.MultiWriter(writers...)
 		return nil
 	}
 }
 
+// WithInputWriters sets up and returns a parameter function that sets the recorder's
+// input writers (what, in addition to the pty, is the input copied to).
 func WithInputWriters(writers ...io.Writer) OptionFunc {
 	return func(t *Termcorder) error {
 		if t.pty == nil {
 			return fmt.Errorf("cannot set input writers - pty not set")
 		}
 		writers = append(writers, t.pty)
-		t.inputWriter = io.MultiWriter(writers...)
+		t.inputWriters = io.MultiWriter(writers...)
 		return nil
 	}
 }
 
+// WithInputReaders sets up and returns a parameter function that sets the recorder's
+// input readers (what input is copied to the pty).
 func WithInputReaders(readers ...io.Reader) OptionFunc {
 	return func(t *Termcorder) error {
-		t.inputReader = io.MultiReader(readers...)
+		t.inputReaders = io.MultiReader(readers...)
 		return nil
 	}
 }
 
+// NewTermcorder creates a new Termcorder instance, setting up and hooking the pty to
+// a given command, and configuring readers/writers.
 func NewTermcorder(c *exec.Cmd, options ...OptionFunc) (*Termcorder, error) {
 	t := Termcorder{
 		cmd: c,
@@ -85,10 +99,10 @@ func NewTermcorder(c *exec.Cmd, options ...OptionFunc) (*Termcorder, error) {
 	}
 
 	//Defaults
-	t.outputWriter = os.Stdout
-	t.inputWriter = t.pty
-	t.outputReader = t.pty
-	t.inputReader = os.Stdin
+	t.outputWriters = os.Stdout
+	t.inputWriters = t.pty
+	t.outputReaders = t.pty
+	t.inputReaders = os.Stdin
 
 	for _, option := range options {
 		err := option(&t)
@@ -99,6 +113,7 @@ func NewTermcorder(c *exec.Cmd, options ...OptionFunc) (*Termcorder, error) {
 	return &t, nil
 }
 
+// Start starts the command in the setup pty, copying readers to writers for both input and output.
 func (t *Termcorder) Start() error {
 	err := t.cmd.Start()
 	if err != nil {
@@ -110,13 +125,14 @@ func (t *Termcorder) Start() error {
 	defer t.restoreTermState()
 
 	go func() {
-		io.Copy(t.inputWriter, t.inputReader)
+		io.Copy(t.inputWriters, t.inputReaders)
 	}()
 
-	io.Copy(t.outputWriter, t.outputReader)
+	io.Copy(t.outputWriters, t.outputReaders)
 	return nil
 }
 
+// Record creates a new Termcording and starts it.
 func Record(c *exec.Cmd, options ...OptionFunc) error {
 	t, err := NewTermcorder(c, options...)
 	if err != nil {

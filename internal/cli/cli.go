@@ -11,7 +11,10 @@ import (
 	"github.com/haguro/termcord/pkg/tc"
 )
 
+// DefaultFileName sets the default name of the recording file.
 const DefaultFileName = "termcording"
+
+// EnvVar sets the key of the environment variable that is set while the command is executed.
 const EnvVar = "TERMCORDING"
 
 type request struct {
@@ -26,8 +29,12 @@ type request struct {
 	filename    string
 }
 
+// RecorderSetupFunc defines the functions that sets up the recording destination.
+// A `RecorderSetupFunc` function is passed to and subsequently executed by `Run` set up the recorder.
+// This could be anything from a file on the file system, a network socket, or a simple bytes buffer.
 type RecorderSetupFunc func(string, bool) (io.ReadWriteCloser, error)
 
+// FileRecorderSetup sets up the recording file as the recording destination.
 func FileRecorderSetup(filename string, append bool) (file io.ReadWriteCloser, err error) {
 	mode := os.O_TRUNC
 	if append {
@@ -40,6 +47,7 @@ func FileRecorderSetup(filename string, append bool) (file io.ReadWriteCloser, e
 	return f, nil
 }
 
+// Run parses the command arguments, sets up the recording destination and initiates the terminal recorder.
 func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup RecorderSetupFunc) int {
 	r, err := parseFlags(args, errOut)
 	if err != nil {
