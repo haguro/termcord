@@ -129,7 +129,7 @@ func (t *Termcorder) Start() error {
 	}()
 
 	io.Copy(t.outputWriters, t.outputReaders)
-	return nil
+	return t.cmd.Wait()
 }
 
 // Record creates a new Termcording and starts it.
