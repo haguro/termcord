@@ -2,7 +2,7 @@ before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./cmd/termcord/main.go
+  - main: ./main.go
     binary: termcord
     env:
       - CGO_ENABLED=0
