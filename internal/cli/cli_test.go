@@ -43,7 +43,13 @@ func TestRunPrintHelp(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
 
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
@@ -66,7 +72,14 @@ func TestRunRecordCommandOutput(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -81,7 +94,14 @@ func TestRunPrintsRecordingPromptsByDefault(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -99,7 +119,14 @@ func TestRunDoesNotPrintRecordingPromptsWhenFlagIsPassed(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -117,7 +144,14 @@ func TestRunRecordWithDefaultFilename(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -133,7 +167,14 @@ func TestRunRecordWithCustomFilename(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -148,7 +189,14 @@ func TestRunAddRecordingTimestampedPromptsToFile(t *testing.T) {
 	in, out, errOut := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
 	f := mockFile{}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -179,7 +227,14 @@ func TestRunTruncateRecordingFileByDefault(t *testing.T) {
 		content: bytes.NewBuffer([]byte(existing)),
 	}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
@@ -198,7 +253,14 @@ func TestRunAppendToRecordingFileWhenFlagIsPassed(t *testing.T) {
 		content: bytes.NewBuffer([]byte(existing)),
 	}
 
-	r := cli.Run(args, in, out, errOut, mockRecorderSetup(&f))
+	r := cli.Run(
+		args,
+		cli.WithInput(in),
+		cli.WithOutput(out),
+		cli.WithErrorOutput(errOut),
+		cli.WithRecorderSetupFunc(mockRecorderSetup(&f)),
+	)
+
 	if r != 0 {
 		t.Errorf("expected to return 0, returned %d - error output was: %s", r, errOut.String())
 	}
