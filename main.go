@@ -7,5 +7,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.Run(os.Args, os.Stdin, os.Stdout, os.Stderr, cli.FileRecorderSetup))
+	os.Exit(cli.Run(os.Args))
 }

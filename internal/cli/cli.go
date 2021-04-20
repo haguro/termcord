@@ -18,15 +18,19 @@ const DefaultFileName = "termcording"
 const EnvVar = "TERMCORDING"
 
 type request struct {
-	flagSet     *flag.FlagSet
-	command     string
-	args        []string
-	help        bool
-	quiet       bool
-	append      bool
-	interactive bool
-	logInput    bool
-	filename    string
+	flagSet       *flag.FlagSet
+	command       string
+	args          []string
+	input         io.Reader
+	output        io.Writer
+	errorOutput   io.Writer
+	recorderSetup RecorderSetupFunc
+	help          bool
+	quiet         bool
+	append        bool
+	interactive   bool
+	logInput      bool
+	filename      string
 }
 
 // RecorderSetupFunc defines the functions that sets up the recording destination.
@@ -47,11 +51,49 @@ func FileRecorderSetup(filename string, append bool) (file io.ReadWriteCloser, e
 	return f, nil
 }
 
+// WithInput returns a function that sets the input of the input of the request.
+func WithInput(input io.Reader) func(r *request) {
+	return func(r *request) {
+		r.input = input
+	}
+}
+
+// WithOutput returns a function that sets the output of the input of the request.
+func WithOutput(output io.Writer) func(r *request) {
+	return func(r *request) {
+		r.output = output
+	}
+}
+
+// WithErrorOutput returns a function that sets the error output of the input of the request.
+func WithErrorOutput(errorOut io.Writer) func(r *request) {
+	return func(r *request) {
+		r.errorOutput = errorOut
+	}
+}
+
+// WithRecorderSetupFunc returns a function that sets the recorder setup function of the request.
+func WithRecorderSetupFunc(f RecorderSetupFunc) func(r *request) {
+	return func(r *request) {
+		r.recorderSetup = f
+	}
+}
+
 // Run parses the command arguments, sets up the recording destination and initiates the terminal recorder.
-func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup RecorderSetupFunc) int {
-	r, err := parseFlags(args, errOut)
+func Run(args []string, options ...func(r *request)) int {
+	r := request{
+		input:         os.Stdin,
+		output:        os.Stdout,
+		errorOutput:   os.Stderr,
+		recorderSetup: FileRecorderSetup,
+	}
+	for _, option := range options {
+		option(&r)
+	}
+
+	err := r.parseFlags(args)
 	if err != nil {
-		fmt.Fprintf(errOut, "failed to parse command line arguments: %s", err)
+		fmt.Fprintf(r.errorOutput, "failed to parse command line arguments: %s", err)
 		return -1
 	}
 
@@ -62,18 +104,18 @@ func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup Recor
 
 	//TODO don't start if envVar is set?
 
-	options := []tc.OptionFunc{}
+	tcOptions := []tc.OptionFunc{}
 
 	c := exec.Command(r.command, r.args...)
 
-	if in == os.Stdin && r.interactive {
-		options = append(options, tc.RawMode)
-		options = append(options, tc.InheritSizeFrom(os.Stdin))
+	if r.input == os.Stdin && r.interactive {
+		tcOptions = append(tcOptions, tc.RawMode)
+		tcOptions = append(tcOptions, tc.InheritSizeFrom(os.Stdin))
 	}
 
-	f, err := recorderSetup(r.filename, r.append)
+	f, err := r.recorderSetup(r.filename, r.append)
 	if err != nil {
-		fmt.Fprintf(errOut, "failed to set up recorder: %s", err)
+		fmt.Fprintf(r.errorOutput, "failed to set up recorder: %s", err)
 		return -1
 	}
 	fmt.Fprintf(f, "Recording started on %s\n", time.Now().Format(time.RFC1123))
@@ -81,33 +123,31 @@ func Run(args []string, in io.Reader, out, errOut io.Writer, recorderSetup Recor
 		fmt.Fprintf(f, "Recording ended on %s\n", time.Now().Format(time.RFC1123))
 		f.Close()
 	}()
-	options = append(options, tc.WithOutputWriters(out, f))
+	tcOptions = append(tcOptions, tc.WithOutputWriters(r.output, f))
 
 	if r.logInput {
-		options = append(options, tc.WithInputWriters(f))
+		tcOptions = append(tcOptions, tc.WithInputWriters(f))
 	}
 
 	if !r.quiet {
-		fmt.Fprintln(out, "Starting recording session. CTRL-D to end.")
-		defer fmt.Fprintf(out, "Recording session ended. Session saved to %s\n", r.filename)
+		fmt.Fprintln(r.output, "Starting recording session. CTRL-D to end.")
+		defer fmt.Fprintf(r.output, "Recording session ended. Session saved to %s\n", r.filename)
 	}
 
 	os.Setenv(EnvVar, c.String())
 
-	err = tc.Record(c, options...)
+	err = tc.Record(c, tcOptions...)
 	if err != nil {
-		fmt.Fprintf(errOut, "failed to start recording: %s", err)
+		fmt.Fprintf(r.errorOutput, "failed to start recording: %s", err)
 		return -1
 	}
 
 	return 0
 }
 
-func parseFlags(args []string, errOut io.Writer) (*request, error) {
-	r := request{}
-
+func (r *request) parseFlags(args []string) error {
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
-	fs.SetOutput(errOut)
+	fs.SetOutput(r.errorOutput)
 	fs.Usage = printHelpFunc(fs)
 	fs.BoolVar(&r.help, "h", false, "Prints this message")
 	fs.BoolVar(&r.quiet, "q", false, "Quiet mode - suppresses the recording start and end prompts")
@@ -118,12 +158,12 @@ func parseFlags(args []string, errOut io.Writer) (*request, error) {
 
 	err := fs.Parse(args[1:])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	r.flagSet = fs
 
 	if r.help {
-		return &r, nil
+		return nil
 	}
 
 	switch fs.NArg() {
@@ -136,7 +176,7 @@ func parseFlags(args []string, errOut io.Writer) (*request, error) {
 		r.command = fs.Arg(0)
 		r.args = fs.Args()[1:]
 	}
-	return &r, nil
+	return nil
 }
 
 func printHelpFunc(fs *flag.FlagSet) func() {
