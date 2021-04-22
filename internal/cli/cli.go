@@ -28,7 +28,6 @@ type request struct {
 	help          bool
 	quiet         bool
 	append        bool
-	interactive   bool
 	logInput      bool
 	filename      string
 }
@@ -108,7 +107,7 @@ func Run(args []string, options ...func(r *request)) int {
 
 	c := exec.Command(r.command, r.args...)
 
-	if r.input == os.Stdin && r.interactive {
+	if r.input == os.Stdin {
 		tcOptions = append(tcOptions, tc.RawMode)
 		tcOptions = append(tcOptions, tc.InheritSizeFrom(os.Stdin))
 	}
@@ -153,7 +152,6 @@ func (r *request) parseFlags(args []string) error {
 	fs.BoolVar(&r.quiet, "q", false, "Quiet mode - suppresses the recording start and end prompts")
 	fs.BoolVar(&r.append, "a", false, "Appends to file instead of overwriting it")
 	fs.BoolVar(&r.logInput, "k", false, "Log key strokes to file as well")
-	fs.BoolVar(&r.interactive, "i", false, "Run command as interactive. Essential when passing a shell executable as the command argument")
 	fs.StringVar(&r.filename, "f", DefaultFileName, "Sets recording filename")
 
 	err := fs.Parse(args[1:])
@@ -169,7 +167,6 @@ func (r *request) parseFlags(args []string) error {
 	switch fs.NArg() {
 	case 0:
 		r.command = os.Getenv("SHELL")
-		r.interactive = true
 	case 1:
 		r.command = fs.Arg(0)
 	default:
